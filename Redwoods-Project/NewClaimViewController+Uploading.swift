@@ -117,13 +117,15 @@ extension NewClaimViewController {
 	/// - Parameters:
 	///   - contactIDs: The IDs of the Contact records being associated with the case.
 	///   - caseID: The ID of the case that is being modified.
-	private func createCaseContacts(withContactIDs contactIDs: [String], forCaseID caseID: String) {
-		let associationRequest = RestClient.shared.compositeRequestForCreatingAssociations(fromContactIDs: contactIDs, toCaseID: caseID)
-		RestClient.shared.sendCompositeRequest(associationRequest, onFailure: handleError) { _ in
-			SalesforceLogger.d(type(of: self), message: "Completed creating \(contactIDs.count) case contact record(s). Optionally uploading map image as attachment.")
-			self.unwindToClaims(forCaseID: caseID)
-		}
-	}
+private func createCaseContacts(withContactIDs contactIDs: [String],
+forCaseID caseID: String) {
+           let associationRequest =
+RestClient.shared.compositeRequestForCreatingAssociations(fromContactIDs: contactIDs, toCaseID: caseID)
+                 RestClient.shared.sendCompositeRequest(associationRequest, onFailure: handleError) { _ in
+                       SalesforceLogger.d(type(of: self), message: "Completed creating \(contactIDs.count) case contact record(s). Optionally uploading map image as attachment.")
+                       self.uploadPhotos(forCaseID: caseID)
+             }
+       }
 
 	/// Generates a snapshot image of the map view and uploads it as an attachment.
 	/// When complete, `uploadPhotos(forCaseID:)` is called.
@@ -171,31 +173,43 @@ extension NewClaimViewController {
 	/// When complete, `uploadAudio(forCaseID:)` is called.
 	///
 	/// - Parameter caseID: The ID of the case that is being modified.
-	private func uploadPhotos(forCaseID caseID: String) {
-		for (index, img) in self.selectedImages.enumerated() {
-			let attachmentRequest = RestClient.shared.requestForCreatingImageAttachment(from: img, relatingToCaseID: caseID)
-			RestClient.shared.send(request: attachmentRequest, onFailure: self.handleError){ result, _ in
-				SalesforceLogger.d(type(of: self), message: "Completed upload of photo \(index + 1) of \(self.selectedImages.count).")
-			}
-		}
-	}
+    private func uploadPhotos(forCaseID caseID: String) {
+         for (index, img) in self.selectedImages.enumerated() {
+               let attachmentRequest =
+RestClient.shared.requestForCreatingImageAttachment(from: img,
+relatingToCaseID: caseID)
+                 RestClient.shared.send(request: attachmentRequest,
+onFailure: self.handleError){ result, _ in
+                      SalesforceLogger.d(type(of: self), message:
+"Completed upload of photo \(index + 1) of
+\(self.selectedImages.count).")
+                 }
+           }
+           self.uploadAudio(forCaseID: caseID)
+    }
 
 	/// Uploads the recorded audio as an attachment.
 	/// When complete, `showConfirmation()` is called.
 	///
 	/// - Parameter caseID: The ID of the case that is being modified.
-	private func uploadAudio(forCaseID caseID: String) {
-		if let audioData = audioFileAsData() {
-			let attachmentRequest = RestClient.shared.requestForCreatingAudioAttachment(from: audioData, relatingToCaseID: caseID)
-			RestClient.shared.send(request: attachmentRequest, onFailure: handleError) { _, _ in
-				SalesforceLogger.d(type(of: self), message: "Completed uploading audio file. Transaction complete!")
-			}
-		} else {
-			// Complete upload if there is no audio file.
-			SalesforceLogger.d(type(of: self), message: "No audio file to upload. Transaction complete!")
-			self.unwindToClaims(forCaseID: caseID)
-		}
-	}
+private func uploadAudio(forCaseID caseID: String) {
+           if let audioData = audioFileAsData() {
+                let attachmentRequest =
+RestClient.shared.requestForCreatingAudioAttachment(from: audioData,
+relatingToCaseID: caseID)
+                 RestClient.shared.send(request: attachmentRequest,
+onFailure: handleError) { _, _ in
+                       SalesforceLogger.d(type(of: self), message:
+"Completed uploading audio file. Transaction complete!")
+                     self.unwindToClaims(forCaseID: caseID)
+                 }
+            } else {
+                  // Complete upload if there is no audio file.
+                  SalesforceLogger.d(type(of: self), message: "No audio
+file to upload. Transaction complete!")
+                  self.unwindToClaims(forCaseID: caseID)
+           }
+     }
 
 	/// Dismisses the current modal and returns the user to open claims.
 	private func unwindToClaims(forCaseID caseID: String?) {
